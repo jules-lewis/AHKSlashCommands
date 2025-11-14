@@ -6,33 +6,98 @@ SetWorkingDir A_ScriptDir
 
 ; --- Script Body ---
 FileCount := 0
-Hotstring("::", "C") ; Global options: Case sensitive
+Hotstring("Case") ; Global options: Case sensitive ; Global options: Case sensitive
+Global MyTriggers := []
 
-Loop, Files, "*.md", "R"
+Loop Files, "commands\*.md", "R"
 {
     FileCount++
-    
-    FileNameFull := A_LoopFileName
-    SplitPath(FileNameFull, &FileNameNoExt) ; v2 way to get parts
-    
-    Trigger := "/" . FileNameNoExt
-    
-    ; Bind the full file name to the RunCommand function
-    Hotstring(Trigger, RunCommand.Bind(FileNameFull), "O")
+
+    ; Get the full path for the function to read
+    ; (e.g., C:\My Script\commands\example.md)
+    FullFilePath := A_LoopFileFullPath
+
+    ; Get the filename without extension for the trigger
+    ; A_LoopFileName is just "example.md"
+    SplitPath(A_LoopFileName, , , , &FileNameNoExt)
+
+    Trigger := ":*:" . "/" . FileNameNoExt
+
+    MyTriggers.Push(Trigger)
+
+    Hotstring(Trigger, RunCommand.Bind(FullFilePath))
 }
 
-MsgBox(FileCount . " dynamic hotstrings created from .md files.", "Dynamic Hotstrings", 64)
-MsgBox("Try typing one of your hotstrings.", "Dynamic Hotstrings", 64)
-return
+; --- Check for FileCount (Unchanged) ---
+if (FileCount = 0)
+{
+    MsgBox("No command files (.md) were found in the 'commands' subfolder."
+        . "`n`nPlease check the README.md file for setup instructions.",
+        "No Commands Loaded", 48)
+}
+else
+{
+    MsgBox(FileCount . " dynamic hotstrings created from .md files.", "Dynamic Hotstrings", 64)
+}
 
+; 1. Add tray menu items for easy control
+A_TrayMenu.Add("&List My Triggers", (*) => ShowMyTriggers())
+A_TrayMenu.Add("&Reload Script", (*) => Reload())
+A_TrayMenu.Add("E&xit Script", (*) => ExitApp())
+
+; 2. Add a hotkey to pop up the list
+; Press Ctrl+Alt+H to see the list
+^!h:: ShowMyTriggers()
+
+return ; End of auto-execute section
+
+ShowMyTriggers() { ; <--- 4. MODIFY THIS: This function is new
+
+    ; 1. Build the list of dynamic triggers from our array
+    Local TriggerList := ""
+    if (MyTriggers.Length > 0)
+    {
+        TriggerList := "Dynamically Created Hotstrings:`n`n"
+        For Index, sTrigger in MyTriggers
+        {
+            TriggerList .= Index . ": " . sTrigger . "`n"
+        }
+    }
+    else
+    {
+        TriggerList := "No dynamic hotstrings were found in the array."
+    }
+
+    ; 2. Show our custom list
+    MsgBox(TriggerList, "Dynamic Triggers List", 64)
+
+    ; 3. Show the static list (which should now include /hw)
+    ListHotkeys()
+}
+
+ReloadScript() {
+    Reload()
+}
+
+ExitScript() {
+    ExitApp()
+}
 
 ; -------------------------------------------
 ; The Core Function: Reads File, Prompts User, Replaces, and Sends Text
 ; -------------------------------------------
 
-RunCommand(FilePath)
+; --- THIS IS THE FIX ---
+; Added ', *' to the function definition.
+; 'FilePath' will receive the first parameter (the one you .Bind-ed).
+; '*' will accept all (any) other parameters, such as the
+; trigger name that the Hotstring() function sends by default.
+RunCommand(FilePath, *)
 {
-    ; 1. Read the file
+    ; We can remove the initial MsgBox now
+    ; MsgBox("RunCommand was called!`nFile path is: " . FilePath)
+
+    ; 1. Read the file (Unchanged)
     Try
     {
         TextContent := FileRead(FilePath, "UTF-8")
@@ -43,49 +108,55 @@ RunCommand(FilePath)
         return
     }
 
-    ; 2. Define the Regex and find prompts
-    PromptRegex := "\{\{([^\}]+)\}\}"
+    ; --- THIS IS THE FIX ---
+    ; Assign TextContent to NewText first
     NewText := TextContent
-    MatchPos := 1
-    
-    Loop
+
+    ; 2. Check if the file was empty (or only whitespace)
+    if (Trim(NewText) == "")
     {
-        ; Find the next match
-        if !RegExMatch(NewText, PromptRegex, &Match, MatchPos)
+        ; Set the output text to the error message
+        NewText := "<<Prompt file is empty.>>"
+    }
+    else
+    {
+        ; 3. --- REFINED REGEX SECTION ---
+        ; This whole section now only runs if the file was NOT empty.
+        
+        PromptRegex := "s)\{\{(.*?)\}\}"
+        MatchPos := 1
+
+        Loop
         {
-            ; No more prompts found, exit the loop
-            break
+            if !RegExMatch(NewText, PromptRegex, &Match, MatchPos)
+                break ; No more prompts found
+
+            PromptQuestion := Trim(Match[1])
+
+            ; Get user input
+            UserInput := InputBox(PromptQuestion, "Input Required")
+
+            if !UserInput.Value ; User pressed Cancel
+            {
+                MsgBox("Operation cancelled by user.", "Cancelled", 48)
+                return
+            }
+
+            ; Replace the prompt with the user's answer
+            NewText := RegExReplace(NewText, PromptRegex, UserInput.Value,, 1, MatchPos)
+
+            ; Update MatchPos to start searching *after* the text we just inserted
+            MatchPos := Match.Pos(0) + StrLen(UserInput.Value)
         }
-        
-        ; Match[1] contains the prompt question
-        PromptQuestion := Trim(Match[1])
-        
-        ; 3. Get user input
-        UserInput := InputBox(PromptQuestion, "Input Required")
-        
-        if !UserInput.Value ; User pressed Cancel
-        {
-            MsgBox("Operation cancelled by user.", "Cancelled", 48)
-            return
-        }
-        
-        ; 4. Replace the prompt with the user's answer
-        NewText := RegExReplace(NewText, PromptRegex, UserInput.Value,, 1, MatchPos)
     }
 
-    ; 5. Copy to clipboard and paste
-    OriginalClipboard := A_ClipboardAll()
+    ; Copy to clipboard and paste 
+    OriginalClipboard := ClipboardAll()
     A_Clipboard := NewText
-    
-    if !ClipWait(2) ; Wait up to 2 seconds
-    {
-        MsgBox("Error: Failed to copy text to clipboard.", "Clipboard Error", 16)
-        return
-    }
-    
-    SendInput("^v") ; Send the paste command
-    
-    ; Restore original clipboard
-    Sleep(100)
+    If ClipWait(0.5)
+        Send "^v"
+        Sleep 300
     A_Clipboard := OriginalClipboard
+    OriginalClipboard := ""
+
 }
