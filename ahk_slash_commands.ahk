@@ -11,8 +11,6 @@ Global MyTriggers := []
 
 Loop Files, "commands\*.md", "R"
 {
-    FileCount++
-
     ; Get the full path for the function to read
     ; (e.g., C:\My Script\commands\example.md)
     FullFilePath := A_LoopFileFullPath
@@ -21,6 +19,17 @@ Loop Files, "commands\*.md", "R"
     ; A_LoopFileName is just "example.md"
     SplitPath(A_LoopFileName, , , , &FileNameNoExt)
 
+    ; Validate the filename to ensure it only contains safe characters
+    if !RegExMatch(FileNameNoExt, "^[a-zA-Z0-9_-]+$")
+    {
+        MsgBox('The command file "' . A_LoopFileName . '" has an invalid name.'
+            . '`n`nFilenames can only contain letters, numbers, hyphens (-), and underscores (_).'
+            . '`n`nThis file will be skipped.',
+            "Invalid Command Name", 48)
+        continue ; Skip to the next file
+    }
+
+    FileCount++ ; Increment count only for valid files
     Trigger := ":*:" . "/" . FileNameNoExt
 
     MyTriggers.Push(Trigger)
