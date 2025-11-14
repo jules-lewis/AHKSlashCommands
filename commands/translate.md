@@ -1,0 +1,1 @@
+Translate the following text into {{Enter target language.}}: {{Enter text to translate.}}

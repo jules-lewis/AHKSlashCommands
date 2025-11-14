@@ -1,0 +1,1 @@
+Provide a brief, self-reflective, writing prompt, suited to journaling.
