@@ -34,9 +34,9 @@ AutoHotkey v2.0 or later — install [here](https://www.autohotkey.com/v2/).
 
 Your markdown files should look something like this:
 
-```markdown
-#### translate.md
+**`translate.md`**
 
+```markdown
 Translate the following text into {{Enter target language.}}: 
 {{Enter text to translate.}}
 ```
