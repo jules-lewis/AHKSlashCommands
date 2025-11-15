@@ -4,9 +4,9 @@
 #Requires AutoHotkey v2.0+
 SetWorkingDir A_ScriptDir
 
-; --- Script Body ---
+; --- Main Body ---
 FileCount := 0
-Hotstring("Case") ; Global options: Case sensitive ; Global options: Case sensitive
+Hotstring("Case") ; Global options: Case sensitive 
 Global MyTriggers := []
 
 Loop Files, "commands\*.md", "R"
@@ -49,20 +49,19 @@ else
     MsgBox(FileCount . " dynamic hotstrings created from .md files.", "Dynamic Hotstrings", 64)
 }
 
-; 1. Add tray menu items for easy control
+; Tray menu items for easy control
 A_TrayMenu.Add("&List My Triggers", (*) => ShowMyTriggers())
 A_TrayMenu.Add("&Reload Script", (*) => Reload())
 A_TrayMenu.Add("E&xit Script", (*) => ExitApp())
 
-; 2. Add a hotkey to pop up the list
-; Press Ctrl+Alt+H to see the list
-^!h:: ShowMyTriggers()
+return 
 
-return ; End of auto-execute section
+; --- Main Body - END ---
 
-ShowMyTriggers() { ; <--- 4. MODIFY THIS: This function is new
 
-    ; 1. Build the list of dynamic triggers from our array
+ShowMyTriggers() {
+
+    ; Build list of dynamic triggers from our array
     Local TriggerList := ""
     if (MyTriggers.Length > 0)
     {
@@ -80,33 +79,19 @@ ShowMyTriggers() { ; <--- 4. MODIFY THIS: This function is new
     ; 2. Show our custom list
     MsgBox(TriggerList, "Dynamic Triggers List", 64)
 
-    ; 3. Show the static list (which should now include /hw)
-    ListHotkeys()
 }
 
-ReloadScript() {
-    Reload()
-}
-
-ExitScript() {
-    ExitApp()
-}
 
 ; -------------------------------------------
 ; The Core Function: Reads File, Prompts User, Replaces, and Sends Text
 ; -------------------------------------------
 
-; --- THIS IS THE FIX ---
-; Added ', *' to the function definition.
-; 'FilePath' will receive the first parameter (the one you .Bind-ed).
+; 'FilePath' will receive the first parameter, the full filename.
 ; '*' will accept all (any) other parameters, such as the
 ; trigger name that the Hotstring() function sends by default.
 RunCommand(FilePath, *)
 {
-    ; We can remove the initial MsgBox now
-    ; MsgBox("RunCommand was called!`nFile path is: " . FilePath)
-
-    ; 1. Read the file (Unchanged)
+    ; Read the file
     Try
     {
         TextContent := FileRead(FilePath, "UTF-8")
@@ -117,8 +102,6 @@ RunCommand(FilePath, *)
         return
     }
 
-    ; --- THIS IS THE FIX ---
-    ; Assign TextContent to NewText first
     NewText := TextContent
 
     ; 2. Check if the file was empty (or only whitespace)
@@ -129,8 +112,7 @@ RunCommand(FilePath, *)
     }
     else
     {
-        ; 3. --- REFINED REGEX SECTION ---
-        ; This whole section now only runs if the file was NOT empty.
+        ; REGEX to find prompts
         
         PromptRegex := "s)\{\{(.*?)\}\}"
         MatchPos := 1
