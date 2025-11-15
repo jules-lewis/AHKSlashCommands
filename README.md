@@ -44,14 +44,3 @@ Translate the following text into {{Enter target language.}}:
 When you you reload the script, you will now have a slash command that is triggered every time you type `/translate` in an editable field (e.g. a chat box). You will be prompted with any question contained between the double braces `{{` and `}}`. As you can see, you can have multiple prompts (and none if you wish).
 
 
-## To Do
-
-There are a couple of features I plan to add in the short term, but wanted to get out an MVP for now:
-
-- [ ] **Improve Startup/Reload Notification:** Replace the initial `MsgBox` that shows the command count with a less intrusive notification.
-- [ ] **System Tray Command Count:** Add a non-clickable menu item to the system tray menu that displays the number of currently loaded commands (e.g., "Commands loaded: 5"). This item should update when the script is reloaded.
-- [ ] **Descriptions:** Add a description for the command, maybe in front-matter?
-- [ ] **Code Refactoring:**
-    - [ ] Create a dedicated `LoadCommands()` function to encapsulate the logic for finding `.md` files, creating hotstrings, and updating the tray menu count.
-    - [ ] Create a `SetupTrayMenu()` function to initialize the tray menu items cleanly.
-    - [ ] Ensure the "Reload" tray menu option calls the `LoadCommands()` function to refresh the hotstrings and the command count.
