@@ -32,7 +32,7 @@ Loop Files, "commands\*.md", "R"
     FileCount++ ; Increment count only for valid files
     Trigger := ":*:" . "/" . FileNameNoExt
 
-    MyTriggers.Push(Trigger)
+    MyTriggers.Push("/" . FileNameNoExt)
 
     Hotstring(Trigger, RunCommand.Bind(FullFilePath))
 }
@@ -52,7 +52,6 @@ else
 ; Tray menu items for easy control
 A_TrayMenu.Add("&List My Triggers", (*) => ShowMyTriggers())
 A_TrayMenu.Add("&Reload Script", (*) => Reload())
-A_TrayMenu.Add("E&xit Script", (*) => ExitApp())
 
 return 
 
@@ -61,23 +60,23 @@ return
 
 ShowMyTriggers() {
 
-    ; Build list of dynamic triggers from our array
+    ; Build list of slash commands from our array
     Local TriggerList := ""
     if (MyTriggers.Length > 0)
     {
         TriggerList := "Dynamically Created Hotstrings:`n`n"
         For Index, sTrigger in MyTriggers
         {
-            TriggerList .= Index . ": " . sTrigger . "`n"
+            TriggerList .= sTrigger . "`n"
         }
     }
     else
     {
-        TriggerList := "No dynamic hotstrings were found in the array."
+        TriggerList := "No slash commands found."
     }
 
-    ; 2. Show our custom list
-    MsgBox(TriggerList, "Dynamic Triggers List", 64)
+    ; Show our custom list
+    MsgBox(TriggerList, "Slash Commands", 64)
 
 }
 
@@ -104,7 +103,7 @@ RunCommand(FilePath, *)
 
     NewText := TextContent
 
-    ; 2. Check if the file was empty (or only whitespace)
+    ; Check if the file was empty (or only whitespace)
     if (Trim(NewText) == "")
     {
         ; Set the output text to the error message
@@ -113,7 +112,6 @@ RunCommand(FilePath, *)
     else
     {
         ; REGEX to find prompts
-        
         PromptRegex := "s)\{\{(.*?)\}\}"
         MatchPos := 1
 
